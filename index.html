@@ -521,6 +521,8 @@
     if (tg) {
       tg.ready();
       tg.expand();
+      // Set header color to Podtema blue
+      tg.setHeaderColor('#183263');
       // Apply Telegram theme
       document.documentElement.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color || '#f8f9fa');
       document.documentElement.style.setProperty('--tg-theme-text-color', tg.themeParams.text_color || '#333333');
@@ -543,13 +545,19 @@
       return params.get('r');
     }
 
-    // Format date
+    // Format date - handles both YYYY-MM-DD and pre-formatted strings
     function formatDate(dateStr) {
       if (!dateStr) return '';
-      const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
-                      'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+      // Check if already formatted (contains Russian month names or doesn't match YYYY-MM-DD)
+      const russianMonths = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+                             'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+      // If string contains Russian text or doesn't look like YYYY-MM-DD, return as-is
+      if (russianMonths.some(m => dateStr.includes(m)) || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        return dateStr;
+      }
+      // Parse YYYY-MM-DD format
       const [year, month, day] = dateStr.split('-');
-      return `${parseInt(day)} ${months[parseInt(month) - 1]} ${year}`;
+      return `${parseInt(day)} ${russianMonths[parseInt(month) - 1]} ${year}`;
     }
 
     // Get content type label
@@ -609,12 +617,18 @@
         authorsEl.classList.remove('hidden');
       }
 
-      // Original block
+      // Original block - check for valid URL (not null string)
       const originalBlock = document.getElementById('original-block');
-      if (data.orig?.t) {
-        document.getElementById('original-link').textContent = data.orig.t;
-        if (data.orig.u) {
-          document.getElementById('original-link').href = data.orig.u;
+      const originalLink = document.getElementById('original-link');
+      if (data.orig?.t && data.orig.t.toLowerCase() !== 'null') {
+        originalLink.textContent = data.orig.t;
+        // Check if URL exists and is not literally "null"
+        if (data.orig.u && data.orig.u.toLowerCase() !== 'null') {
+          originalLink.href = data.orig.u;
+        } else {
+          originalLink.removeAttribute('href');
+          originalLink.style.cursor = 'default';
+          originalLink.style.textDecoration = 'none';
         }
         originalBlock.classList.remove('hidden');
       }

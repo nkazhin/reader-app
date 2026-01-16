@@ -138,9 +138,9 @@ function buildJsonBlob(body) {
     r: body.recordId                  // Airtable record ID
   };
 
-  // Optional: full translation HTML
-  if (body.fullHtml) {
-    blob.f = body.fullHtml;
+  // Optional: full translation HTML (accept both field names for compatibility)
+  if (body.translationHtml || body.fullHtml) {
+    blob.f = body.translationHtml || body.fullHtml;
   }
 
   // Optional: source info
