@@ -1,0 +1,24 @@
+{
+  "name": "reader-publish",
+  "version": "1.0.0",
+  "description": "GCF for publishing article summaries to CDN for Reader Mini App",
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "start": "functions-framework --target=publishSummary",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.x.x",
+    "@google-cloud/functions-framework": "^3.4.0"
+  },
+  "keywords": [
+    "google-cloud-functions",
+    "reader",
+    "telegram-mini-app"
+  ],
+  "author": "Podtema",
+  "license": "ISC"
+}
