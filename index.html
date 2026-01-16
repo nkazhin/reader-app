@@ -165,35 +165,26 @@
       gap: 4px;
     }
 
-    /* Original Article Block */
-    .original-block {
-      background: var(--light-gray);
-      border-left: 4px solid var(--primary);
-      padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2);
-      margin: calc(var(--spacing) * 2);
-      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    .header-original {
+      margin-top: calc(var(--spacing) * 1);
+      font-size: 0.85rem;
+      opacity: 0.85;
     }
 
-    .original-label {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      color: var(--gray);
-      font-weight: 600;
-      margin-bottom: 4px;
-      letter-spacing: 0.3px;
+    .header-original-link {
+      color: var(--white);
+      font-style: italic;
+      text-decoration: underline;
     }
 
-    .original-title {
-      font-size: 0.95rem;
-      color: var(--primary);
-      font-weight: 600;
-      text-decoration: none;
-      line-height: 1.4;
-      display: block;
-    }
-
-    .original-title:active {
+    .header-original-link:active {
       opacity: 0.7;
+    }
+
+    .header-original-text {
+      color: var(--white);
+      font-style: italic;
+      text-decoration: none;
     }
 
     /* Tabs */
@@ -492,12 +483,7 @@
         <span id="header-date"></span>
         <span id="header-authors" class="hidden"></span>
       </div>
-    </div>
-
-    <!-- Original Block -->
-    <div id="original-block" class="original-block hidden">
-      <div class="original-label">Оригинал</div>
-      <a id="original-link" class="original-title" href="#" target="_blank"></a>
+      <div id="header-original" class="header-original hidden"></div>
     </div>
 
     <!-- Tabs -->
@@ -545,19 +531,16 @@
       return params.get('r');
     }
 
-    // Format date - handles both YYYY-MM-DD and pre-formatted strings
+    // Format date - converts ISO to DD.MM.YY, passes through other formats
     function formatDate(dateStr) {
       if (!dateStr) return '';
-      // Check if already formatted (contains Russian month names or doesn't match YYYY-MM-DD)
-      const russianMonths = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
-                             'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
-      // If string contains Russian text or doesn't look like YYYY-MM-DD, return as-is
-      if (russianMonths.some(m => dateStr.includes(m)) || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-        return dateStr;
+      // If it matches YYYY-MM-DD (ISO format from Airtable), convert to DD.MM.YY
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        const [year, month, day] = dateStr.split('-');
+        return `${day}.${month}.${year.slice(-2)}`;
       }
-      // Parse YYYY-MM-DD format
-      const [year, month, day] = dateStr.split('-');
-      return `${parseInt(day)} ${russianMonths[parseInt(month) - 1]} ${year}`;
+      // Otherwise return as-is (already formatted)
+      return dateStr;
     }
 
     // Get content type label
@@ -617,20 +600,16 @@
         authorsEl.classList.remove('hidden');
       }
 
-      // Original block - check for valid URL (not null string)
-      const originalBlock = document.getElementById('original-block');
-      const originalLink = document.getElementById('original-link');
+      // Original link in header - "Оригинал: [title]"
+      const headerOriginal = document.getElementById('header-original');
       if (data.orig?.t && data.orig.t.toLowerCase() !== 'null') {
-        originalLink.textContent = data.orig.t;
-        // Check if URL exists and is not literally "null"
-        if (data.orig.u && data.orig.u.toLowerCase() !== 'null') {
-          originalLink.href = data.orig.u;
+        const hasValidUrl = data.orig.u && data.orig.u.toLowerCase() !== 'null';
+        if (hasValidUrl) {
+          headerOriginal.innerHTML = `Оригинал: <a href="${data.orig.u}" target="_blank" class="header-original-link">${data.orig.t}</a>`;
         } else {
-          originalLink.removeAttribute('href');
-          originalLink.style.cursor = 'default';
-          originalLink.style.textDecoration = 'none';
+          headerOriginal.innerHTML = `Оригинал: <span class="header-original-text">${data.orig.t}</span>`;
         }
-        originalBlock.classList.remove('hidden');
+        headerOriginal.classList.remove('hidden');
       }
 
       // Show tabs only if full translation exists

@@ -217,22 +217,27 @@ functions.http('publishSummary', async (req, res) => {
     const jsonBlob = buildJsonBlob(body);
     const objectKey = `${recordId}/summary.json`;
 
-    // Check if already exists (idempotency)
+    // Check if already exists (idempotency) - skip if force=true
+    const forceOverwrite = body.force === true;
     const exists = await objectExists(objectKey);
-    if (exists) {
+    if (exists && !forceOverwrite) {
       log(`Object already exists, skipping upload`, 'info', { recordId, objectKey });
 
       const duration = Date.now() - startTime;
       res.status(200).json({
         success: true,
         skipped: true,
-        message: 'Content already exists',
+        message: 'Content already exists. Use force=true to overwrite.',
         recordId: recordId,
         queryParam: `r=${recordId}`,
         cdnUrl: `${CDN_BASE_URL}/${objectKey}`,
         duration: `${duration}ms`
       });
       return;
+    }
+
+    if (exists && forceOverwrite) {
+      log(`Force overwrite enabled, replacing existing content`, 'info', { recordId, objectKey });
     }
 
     // Upload to Yandex Object Storage

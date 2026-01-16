@@ -19,8 +19,9 @@ let originalURL = config.OriginalURL;
 
 // Metadata
 let contentType = config.ContentType || "article"; // article, podcast, guideline, digest
-let date = config.Date;                       // YYYY-MM-DD format
+let date = config.Date;                       // YYYY-MM-DD format or pre-formatted
 let authors = config.Authors;                 // Optional
+let forceOverwrite = config.Force || false;   // Set to true to overwrite existing content
 
 // Handle potential array inputs (from linked records)
 if (Array.isArray(sourceName) && sourceName.length > 0) {
@@ -150,8 +151,14 @@ async function main() {
         if (authors) {
             payload.authors = authors;
         }
+        if (forceOverwrite) {
+            payload.force = true;
+        }
 
         console.log('Sending request to Reader Publish GCF...');
+        if (forceOverwrite) {
+            console.log('Force overwrite enabled - will replace existing content');
+        }
         console.log('Payload size:', JSON.stringify(payload).length, 'bytes');
 
         const response = await fetchWithRetry(READER_PUBLISH_URL, {
