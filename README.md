@@ -43,7 +43,7 @@ Single-file HTML/CSS/JS that renders article content in Telegram.
 
 **URL format:**
 ```
-https://cdn.etopodtema.com/reader/v1/?r={recordId}
+https://cdn.etopodtema.com/reader/v1/index.html?r={recordId}
 ```
 
 ## Publish GCF (`publish-gcf/`)
@@ -133,7 +133,7 @@ Stored at `/{recordId}/summary.json`:
 
 2. Delivery Automation
    ├── Read ReaderLink from Airtable
-   ├── Build URL: https://cdn.../reader/v1/?r={recordId}
+   ├── Build URL: https://cdn.../reader/v1/index.html?r={recordId}
    └── Send message with web_app button
 
 3. User Opens
