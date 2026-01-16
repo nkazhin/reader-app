@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Подтема</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    /* Google Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap');
+
+    /* CSS Variables - Telegram theme aware */
+    :root {
+      --primary: #183263;
+      --text: #333333;
+      --text-secondary: #666666;
+      --gray: #888888;
+      --light-gray: #f8f9fa;
+      --white: #ffffff;
+      --border: #e2e8f0;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+      --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.1);
+      --radius-sm: 6px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --spacing: 8px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--tg-theme-bg-color, var(--light-gray));
+      -webkit-text-size-adjust: 100%;
+    }
+
+    /* Loading State */
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      padding: calc(var(--spacing) * 4);
+      color: var(--gray);
+    }
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: calc(var(--spacing) * 2);
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Error State */
+    .error-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      padding: calc(var(--spacing) * 4);
+      text-align: center;
+      color: var(--gray);
+    }
+
+    .error-icon {
+      font-size: 3rem;
+      margin-bottom: calc(var(--spacing) * 2);
+    }
+
+    .error-message {
+      font-size: 1rem;
+      margin-bottom: calc(var(--spacing) * 2);
+    }
+
+    /* Header Block - inspired by PDF template */
+    .header-block {
+      background: var(--primary);
+      color: var(--white);
+      padding: calc(var(--spacing) * 2.5) calc(var(--spacing) * 2) calc(var(--spacing) * 2);
+    }
+
+    .header-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: calc(var(--spacing) * 1.5);
+      gap: calc(var(--spacing) * 1);
+    }
+
+    .source-link {
+      color: var(--white);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.85rem;
+      opacity: 0.9;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .source-link:active {
+      opacity: 0.7;
+    }
+
+    .source-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .badge-type {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--primary);
+      background: var(--white);
+      padding: 4px 10px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      font-family: Manrope, Inter, sans-serif;
+      font-weight: 800;
+      font-size: 1.4rem;
+      line-height: 1.2;
+      margin-bottom: calc(var(--spacing) * 1.5);
+    }
+
+    .header-title.long {
+      font-size: 1.2rem;
+    }
+
+    .header-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: calc(var(--spacing) * 1.5);
+      font-size: 0.85rem;
+      opacity: 0.85;
+    }
+
+    .header-meta span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Original Article Block */
+    .original-block {
+      background: var(--light-gray);
+      border-left: 4px solid var(--primary);
+      padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2);
+      margin: calc(var(--spacing) * 2);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+
+    .original-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: var(--gray);
+      font-weight: 600;
+      margin-bottom: 4px;
+      letter-spacing: 0.3px;
+    }
+
+    .original-title {
+      font-size: 0.95rem;
+      color: var(--primary);
+      font-weight: 600;
+      text-decoration: none;
+      line-height: 1.4;
+      display: block;
+    }
+
+    .original-title:active {
+      opacity: 0.7;
+    }
+
+    /* Tabs */
+    .tabs-container {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--white);
+      padding: 0 calc(var(--spacing) * 2);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .tab {
+      flex: 1;
+      padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 1);
+      text-align: center;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--gray);
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .tab:active {
+      background: var(--light-gray);
+    }
+
+    .tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    /* Content Area */
+    .content-wrapper {
+      padding: calc(var(--spacing) * 2);
+      background: var(--white);
+      min-height: 50vh;
+    }
+
+    .content {
+      max-width: 100%;
+      line-height: 1.7;
+      font-size: 1rem;
+    }
+
+    .content h1, .content h2, .content h3,
+    .content h4, .content h5, .content h6 {
+      color: var(--primary);
+      margin-top: calc(var(--spacing) * 3);
+      margin-bottom: calc(var(--spacing) * 1.5);
+      line-height: 1.3;
+      font-weight: 600;
+    }
+
+    .content h1:first-child, .content h2:first-child,
+    .content h3:first-child, .content h4:first-child {
+      margin-top: 0;
+    }
+
+    .content h1 { font-size: 1.4rem; }
+    .content h2 { font-size: 1.25rem; }
+    .content h3 { font-size: 1.1rem; }
+    .content h4 { font-size: 1rem; }
+
+    .content p {
+      margin-bottom: calc(var(--spacing) * 2);
+    }
+
+    .content ul, .content ol {
+      margin-left: calc(var(--spacing) * 3);
+      margin-bottom: calc(var(--spacing) * 2);
+    }
+
+    .content li {
+      margin-bottom: calc(var(--spacing) * 0.5);
+    }
+
+    .content li::marker {
+      color: var(--primary);
+    }
+
+    .content strong {
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .content a {
+      color: var(--primary);
+      text-decoration: underline;
+      word-break: break-word;
+    }
+
+    .content blockquote {
+      border-left: 3px solid var(--primary);
+      padding: calc(var(--spacing) * 1.5);
+      margin: calc(var(--spacing) * 2) 0;
+      background: var(--light-gray);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      font-style: italic;
+      color: var(--text-secondary);
+    }
+
+    /* Table Styles - from guidelines mini app */
+    .table-wrapper {
+      overflow-x: auto;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      max-height: 500px;
+      margin: calc(var(--spacing) * 2) 0;
+      background: var(--white);
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .content table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.9rem;
+    }
+
+    .content table th,
+    .content table td {
+      padding: calc(var(--spacing) * 1.25);
+      text-align: left;
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      word-wrap: break-word;
+      background: var(--white);
+    }
+
+    .content table th:first-child,
+    .content table td:first-child {
+      border-left: 1px solid var(--border);
+    }
+
+    .content table tr:first-child th,
+    .content table tr:first-child td {
+      border-top: 1px solid var(--border);
+    }
+
+    .content table thead {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    .content table thead th {
+      background: var(--light-gray);
+      font-weight: 600;
+      color: var(--primary);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .content table thead::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 2px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.08), transparent);
+      pointer-events: none;
+    }
+
+    .content table tbody th {
+      background: var(--light-gray);
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .content table tr:nth-child(even) td {
+      background: rgba(24, 50, 99, 0.02);
+    }
+
+    .content table caption {
+      font-style: italic;
+      text-align: left;
+      padding: calc(var(--spacing) * 1) calc(var(--spacing) * 1.5);
+      color: var(--gray);
+      caption-side: top;
+    }
+
+    /* Figure Styles */
+    .content figure {
+      margin: calc(var(--spacing) * 2) 0;
+      text-align: center;
+      background: var(--light-gray);
+      padding: calc(var(--spacing) * 1.5);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+    }
+
+    .content figure img {
+      max-width: 100%;
+      height: auto;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+
+    .content figcaption {
+      font-size: 0.9rem;
+      font-style: italic;
+      color: var(--gray);
+      margin-top: calc(var(--spacing) * 1);
+      text-align: left;
+    }
+
+    /* Code */
+    .content code {
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.85em;
+      background: var(--light-gray);
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    .content pre {
+      background: var(--light-gray);
+      padding: calc(var(--spacing) * 1.5);
+      border-radius: var(--radius-sm);
+      overflow-x: auto;
+      margin: calc(var(--spacing) * 2) 0;
+      border: 1px solid var(--border);
+    }
+
+    .content pre code {
+      background: none;
+      padding: 0;
+      border: none;
+    }
+
+    /* Disclaimer */
+    .disclaimer {
+      margin-top: calc(var(--spacing) * 4);
+      padding-top: calc(var(--spacing) * 2);
+      border-top: 1px solid var(--border);
+      font-size: 0.85rem;
+      color: var(--gray);
+      font-style: italic;
+      line-height: 1.5;
+    }
+
+    /* Hidden */
+    .hidden {
+      display: none !important;
+    }
+
+    /* Mobile optimizations */
+    @media (max-width: 480px) {
+      .content { font-size: 0.95rem; }
+      .content h1 { font-size: 1.3rem; }
+      .content h2 { font-size: 1.15rem; }
+      .content table { font-size: 0.8rem; }
+      .content table th,
+      .content table td {
+        padding: calc(var(--spacing) * 1);
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading State -->
+  <div id="loading" class="loading-container">
+    <div class="loading-spinner"></div>
+    <div>Загрузка...</div>
+  </div>
+
+  <!-- Error State -->
+  <div id="error" class="error-container hidden">
+    <div class="error-icon">:(</div>
+    <div class="error-message">Не удалось загрузить контент</div>
+  </div>
+
+  <!-- Main Content -->
+  <div id="main" class="hidden">
+    <!-- Header -->
+    <div class="header-block">
+      <div class="header-top-row">
+        <a id="source-link" class="source-link" href="#" target="_blank">
+          <span id="source-name" class="source-name"></span>
+        </a>
+        <div id="badge-type" class="badge-type"></div>
+      </div>
+      <h1 id="header-title" class="header-title"></h1>
+      <div class="header-meta">
+        <span id="header-date"></span>
+        <span id="header-authors" class="hidden"></span>
+      </div>
+    </div>
+
+    <!-- Original Block -->
+    <div id="original-block" class="original-block hidden">
+      <div class="original-label">Оригинал</div>
+      <a id="original-link" class="original-title" href="#" target="_blank"></a>
+    </div>
+
+    <!-- Tabs -->
+    <div id="tabs-container" class="tabs-container hidden">
+      <button class="tab active" data-tab="summary">Конспект</button>
+      <button class="tab" data-tab="full">Полный перевод</button>
+    </div>
+
+    <!-- Content -->
+    <div class="content-wrapper">
+      <div id="content" class="content"></div>
+      <div class="disclaimer">
+        Перевод статьи и конспект подготовлены с использованием искусственного интеллекта. ИИ может ошибаться. Всегда перепроверяйте факты и выводы.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Telegram WebApp
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      // Apply Telegram theme
+      document.documentElement.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color || '#f8f9fa');
+      document.documentElement.style.setProperty('--tg-theme-text-color', tg.themeParams.text_color || '#333333');
+    }
+
+    // DOM Elements
+    const loadingEl = document.getElementById('loading');
+    const errorEl = document.getElementById('error');
+    const mainEl = document.getElementById('main');
+    const contentEl = document.getElementById('content');
+    const tabsContainer = document.getElementById('tabs-container');
+
+    // State
+    let articleData = null;
+    let currentTab = 'summary';
+
+    // Get record ID from URL
+    function getRecordId() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('r');
+    }
+
+    // Format date
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+                      'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+      const [year, month, day] = dateStr.split('-');
+      return `${parseInt(day)} ${months[parseInt(month) - 1]} ${year}`;
+    }
+
+    // Get content type label
+    function getTypeLabel(type) {
+      const labels = {
+        'article': 'Статья',
+        'podcast': 'Подкаст',
+        'guideline': 'Гайдлайн',
+        'digest': 'Дайджест'
+      };
+      return labels[type] || 'Статья';
+    }
+
+    // Wrap tables in scrollable container
+    function processContent(html) {
+      if (!html) return '';
+      // Wrap tables in table-wrapper for horizontal scrolling
+      return html.replace(/<table([\s\S]*?)<\/table>/gi, '<div class="table-wrapper"><table$1</table></div>');
+    }
+
+    // Render article
+    function renderArticle(data) {
+      // Header
+      const titleEl = document.getElementById('header-title');
+      titleEl.textContent = data.t;
+      if (data.t.length > 80) {
+        titleEl.classList.add('long');
+      }
+
+      // Source
+      const sourceNameEl = document.getElementById('source-name');
+      const sourceLinkEl = document.getElementById('source-link');
+      if (data.src?.n) {
+        sourceNameEl.textContent = data.src.n;
+        if (data.src.u) {
+          sourceLinkEl.href = data.src.u;
+        } else {
+          sourceLinkEl.removeAttribute('href');
+          sourceLinkEl.style.cursor = 'default';
+        }
+      } else {
+        sourceNameEl.textContent = 'Подтема';
+        sourceLinkEl.removeAttribute('href');
+        sourceLinkEl.style.cursor = 'default';
+      }
+
+      // Badge
+      document.getElementById('badge-type').textContent = getTypeLabel(data.y);
+
+      // Date
+      document.getElementById('header-date').textContent = formatDate(data.d);
+
+      // Authors
+      const authorsEl = document.getElementById('header-authors');
+      if (data.a) {
+        authorsEl.textContent = '• ' + data.a;
+        authorsEl.classList.remove('hidden');
+      }
+
+      // Original block
+      const originalBlock = document.getElementById('original-block');
+      if (data.orig?.t) {
+        document.getElementById('original-link').textContent = data.orig.t;
+        if (data.orig.u) {
+          document.getElementById('original-link').href = data.orig.u;
+        }
+        originalBlock.classList.remove('hidden');
+      }
+
+      // Show tabs only if full translation exists
+      if (data.f) {
+        tabsContainer.classList.remove('hidden');
+      }
+
+      // Render content
+      contentEl.innerHTML = processContent(data.s);
+    }
+
+    // Switch tab
+    function switchTab(tab) {
+      if (!articleData) return;
+      currentTab = tab;
+
+      // Update tab buttons
+      document.querySelectorAll('.tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+      });
+
+      // Update content
+      const html = tab === 'summary' ? articleData.s : articleData.f;
+      contentEl.innerHTML = processContent(html);
+
+      // Scroll to top
+      window.scrollTo(0, 0);
+
+      // Haptic feedback
+      if (tg?.HapticFeedback) {
+        tg.HapticFeedback.selectionChanged();
+      }
+    }
+
+    // Send analytics event (fire-and-forget)
+    function sendAnalytics(data) {
+      try {
+        const userId = tg?.initDataUnsafe?.user?.id;
+        if (!userId) return;
+
+        // Use the same analytics endpoint as guidelines mini app
+        fetch('https://mini-app-analytics-305018873985.europe-west1.run.app/event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event: 'reader_view',
+            userId: userId,
+            recordId: data.r,
+            contentType: data.y,
+            timestamp: Date.now()
+          })
+        }).catch(() => {}); // Ignore errors
+      } catch (e) {
+        // Ignore
+      }
+    }
+
+    // Show error
+    function showError(message) {
+      loadingEl.classList.add('hidden');
+      mainEl.classList.add('hidden');
+      errorEl.classList.remove('hidden');
+      if (message) {
+        document.querySelector('.error-message').textContent = message;
+      }
+    }
+
+    // Load article
+    async function loadArticle() {
+      const recordId = getRecordId();
+      if (!recordId) {
+        showError('Статья не найдена');
+        return;
+      }
+
+      try {
+        const response = await fetch(`https://cdn.etopodtema.com/${recordId}/summary.json`);
+        if (!response.ok) {
+          throw new Error('Not found');
+        }
+
+        articleData = await response.json();
+
+        // Render
+        renderArticle(articleData);
+
+        // Show main content
+        loadingEl.classList.add('hidden');
+        mainEl.classList.remove('hidden');
+
+        // Send analytics
+        sendAnalytics(articleData);
+
+      } catch (error) {
+        console.error('Failed to load article:', error);
+        showError('Не удалось загрузить статью');
+      }
+    }
+
+    // Tab click handler
+    tabsContainer.addEventListener('click', (e) => {
+      const tab = e.target.closest('.tab');
+      if (tab && tab.dataset.tab) {
+        switchTab(tab.dataset.tab);
+      }
+    });
+
+    // Initialize
+    loadArticle();
+  </script>
+</body>
+</html>

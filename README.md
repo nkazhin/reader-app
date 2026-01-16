@@ -1,63 +1,96 @@
-# Reader Publish GCF
+# Reader App
 
-Google Cloud Function for publishing article summaries to CDN for the Podtema Reader Mini App.
+Podtema Reader Mini App for displaying article summaries in Telegram with full analytics.
 
-## Purpose
+## Overview
 
-Accepts article content (title, summary HTML, full translation HTML, metadata) and uploads it as a JSON blob to Yandex Object Storage CDN. Returns a query parameter for use in Telegram Mini App URLs.
+Replaces Telegraph for article delivery with:
+- Full analytics (user ID, content ID, timestamps)
+- Cross-platform consistency (iOS, Android, Desktop)
+- Two-tab UI (Summary + Full Translation)
+- Proper table rendering with sticky headers
+- No content length limits
 
-## Endpoint
+## Structure
 
-`POST /publishSummary`
+```
+reader-app/
+├── index.html          # Mini app (single file, deployed to CDN)
+├── publish-gcf/        # Cloud Function for publishing content
+│   ├── index.js
+│   └── package.json
+└── README.md
+```
 
-### Authentication
+## Mini App (`index.html`)
 
-Requires `X-API-Key` header with valid API key.
+Single-file HTML/CSS/JS that renders article content in Telegram.
 
-### Request Body
+**Features:**
+- Header block with source info, title, date, authors
+- Original article link block
+- Two tabs: "Конспект" / "Полный перевод"
+- Responsive table rendering with horizontal scroll
+- Telegram theme integration
+- Haptic feedback on tab switch
+- Analytics tracking
 
+**Deployment:**
+```bash
+# Upload to CDN at /reader/v1/index.html
+# Immutable - version changes go to /reader/v2/
+```
+
+**URL format:**
+```
+https://cdn.etopodtema.com/reader/v1/?r={recordId}
+```
+
+## Publish GCF (`publish-gcf/`)
+
+Publishes article content to CDN as JSON blobs.
+
+**Service URL:** `https://reader-publish-305018873985.europe-west1.run.app`
+
+**Endpoint:** `POST /`
+
+**Headers:**
+- `Content-Type: application/json`
+- `X-API-Key: {api_key}`
+
+**Request:**
 ```json
 {
   "recordId": "recABC123xyz",
   "contentType": "article",
-  "title": "Атопический дерматит: рекомендации AAD 2024",
-  "summaryHtml": "<h2>Определение</h2><p>...</p>",
-  "fullHtml": "<h2>Введение</h2><p>...</p>",
+  "title": "Title in Russian",
+  "summaryHtml": "<h2>...</h2><p>...</p>",
+  "fullHtml": "<h2>...</h2><p>...</p>",
   "date": "2025-01-15",
   "sourceName": "JAMA Dermatology",
-  "sourceUrl": "https://jamanetwork.com/...",
-  "originalTitle": "Atopic Dermatitis Guidelines 2024",
+  "sourceUrl": "https://...",
+  "originalTitle": "Original Title",
   "originalUrl": "https://...",
-  "authors": "Dr. Smith et al."
+  "authors": "Dr. Smith"
 }
 ```
 
-**Required fields:**
-- `recordId` - Airtable record ID
-- `contentType` - One of: `article`, `podcast`, `guideline`, `digest`
-- `title` - Russian title
-- `summaryHtml` - Summary HTML content
-- `date` - Publication date (YYYY-MM-DD)
-
-**Optional fields:**
-- `fullHtml` - Full translation HTML
-- `sourceName` - Source journal/podcast name
-- `sourceUrl` - Source URL
-- `originalTitle` - Original article title
-- `originalUrl` - Original article URL
-- `authors` - Author names
-
-### Response
-
+**Response:**
 ```json
 {
   "success": true,
   "recordId": "recABC123xyz",
   "queryParam": "r=recABC123xyz",
-  "cdnUrl": "https://cdn.etopodtema.com/recABC123xyz/summary.json",
-  "size": 15234,
-  "duration": "245ms"
+  "cdnUrl": "https://cdn.etopodtema.com/recABC123xyz/summary.json"
 }
+```
+
+**Deploy:**
+```bash
+cd publish-gcf
+gcloud run deploy reader-publish \
+  --region=europe-west1 \
+  --source=.
 ```
 
 ## JSON Blob Format
@@ -72,40 +105,48 @@ Stored at `/{recordId}/summary.json`:
   "y": "article",
   "d": "2025-01-15",
   "r": "recABC123xyz",
-  "src": { "n": "JAMA Dermatology", "u": "https://..." },
+  "src": { "n": "Source Name", "u": "https://..." },
   "orig": { "t": "Original Title", "u": "https://..." },
-  "a": "Dr. Smith et al."
+  "a": "Authors"
 }
 ```
 
 | Key | Description |
 |-----|-------------|
-| `t` | Title |
+| `t` | Title (Russian) |
 | `s` | Summary HTML |
 | `f` | Full translation HTML (optional) |
-| `y` | Content type |
-| `d` | Date |
-| `r` | Record ID |
+| `y` | Type: article, podcast, guideline, digest |
+| `d` | Date (YYYY-MM-DD) |
+| `r` | Airtable record ID |
 | `src` | Source info (optional) |
 | `orig` | Original article info (optional) |
 | `a` | Authors (optional) |
 
-## Idempotency
+## Integration Flow
 
-If content for a recordId already exists, the function returns success with `skipped: true` without re-uploading.
+```
+1. Packaging Automation
+   ├── HTML content ready
+   ├── Call Publish GCF with article data
+   └── Store queryParam in Airtable ReaderLink field
 
-## Environment Variables
+2. Delivery Automation
+   ├── Read ReaderLink from Airtable
+   ├── Build URL: https://cdn.../reader/v1/?r={recordId}
+   └── Send message with web_app button
+
+3. User Opens
+   ├── Mini app loads (cached)
+   ├── Fetches /{recordId}/summary.json (cached)
+   ├── Renders content with tabs
+   └── Sends analytics event
+```
+
+## Environment Variables (GCF)
 
 - `YandexKeyId` - Yandex Object Storage access key
-- `YandexSecretAccessKey` - Yandex Object Storage secret key
-- `YandexBucketName` - Bucket name (default: podtema-cdn)
+- `YandexSecretAccessKey` - Yandex Object Storage secret
+- `YandexBucketName` - Bucket name (default: podtema)
 - `ApiKey` - API key for authentication
-- `SrvcBotToken` - Telegram service bot token for error notifications
-
-## Deployment
-
-```bash
-gcloud run deploy reader-publish \
-  --region=europe-west1 \
-  --source=/tmp/reader-publish
-```
+- `SrvcBotToken` - Telegram service bot for error notifications
