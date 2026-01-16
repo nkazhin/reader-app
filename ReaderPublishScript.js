@@ -6,7 +6,7 @@ let config = input.config();
 // Core content
 let title = config.Title;                     // Russian title
 let summaryHtml = config.SummaryHTML;         // Summary/конспект HTML
-let fullHtml = config.FullHTML;               // Full translation HTML (optional)
+let translationHtml = config.TranslationHTML; // Full translation HTML (optional)
 let recordId = config.RecordId;               // Airtable record ID
 
 // Source info (journal/podcast)
@@ -35,7 +35,7 @@ if (Array.isArray(authors) && authors.length > 0) {
 
 // Constants
 const READER_PUBLISH_URL = 'https://reader-publish-305018873985.europe-west1.run.app';
-const API_KEY = '8087cb8470e9b3d05adc3134382cb3e4270c41b388bd730dbb32b4393daa13c1';
+const API_KEY = input.secret('ReaderGCF');    // Airtable secret
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 5000;
 
@@ -106,7 +106,7 @@ async function main() {
         console.log('Original Title:', originalTitle || '(none)');
         console.log('Original URL:', originalURL || '(none)');
         console.log('Summary HTML length:', summaryHtml ? summaryHtml.length : 0, 'characters');
-        console.log('Full HTML length:', fullHtml ? fullHtml.length : 0, 'characters');
+        console.log('Translation HTML length:', translationHtml ? translationHtml.length : 0, 'characters');
 
         // Validate required fields
         if (!recordId) {
@@ -132,8 +132,8 @@ async function main() {
         };
 
         // Add optional fields if present
-        if (fullHtml) {
-            payload.fullHtml = fullHtml;
+        if (translationHtml) {
+            payload.translationHtml = translationHtml;
         }
         if (sourceName) {
             payload.sourceName = sourceName;
