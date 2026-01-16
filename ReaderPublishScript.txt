@@ -1,0 +1,199 @@
+// Airtable Script: Reader Mini App Publish
+// Publishes article content to CDN for Reader Mini App display
+let config = input.config();
+
+// --- INPUT VARIABLES ---
+// Core content
+let title = config.Title;                     // Russian title
+let summaryHtml = config.SummaryHTML;         // Summary/конспект HTML
+let fullHtml = config.FullHTML;               // Full translation HTML (optional)
+let recordId = config.RecordId;               // Airtable record ID
+
+// Source info (journal/podcast)
+let sourceName = config.SourceName;
+let sourceURL = config.SourceURL;
+
+// Original article info
+let originalTitle = config.OriginalTitle;
+let originalURL = config.OriginalURL;
+
+// Metadata
+let contentType = config.ContentType || "article"; // article, podcast, guideline, digest
+let date = config.Date;                       // YYYY-MM-DD format
+let authors = config.Authors;                 // Optional
+
+// Handle potential array inputs (from linked records)
+if (Array.isArray(sourceName) && sourceName.length > 0) {
+    sourceName = sourceName[0];
+}
+if (Array.isArray(sourceURL) && sourceURL.length > 0) {
+    sourceURL = sourceURL[0];
+}
+if (Array.isArray(authors) && authors.length > 0) {
+    authors = authors[0];
+}
+
+// Constants
+const READER_PUBLISH_URL = 'https://reader-publish-305018873985.europe-west1.run.app';
+const API_KEY = '8087cb8470e9b3d05adc3134382cb3e4270c41b388bd730dbb32b4393daa13c1';
+const MAX_RETRY_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 5000;
+
+// Delay function using busy-wait (works in Airtable)
+function delay(ms) {
+    var limit = new Date();
+    limit = limit.setMilliseconds(limit.getMilliseconds() + ms);
+    while ((new Date()) < limit) {
+        // busy wait
+    }
+}
+
+// Function to retry API calls
+async function fetchWithRetry(url, options) {
+    let attempt = 0;
+    let response;
+
+    while (attempt < MAX_RETRY_ATTEMPTS) {
+        try {
+            console.log(`API call attempt ${attempt + 1} of ${MAX_RETRY_ATTEMPTS}`);
+            response = await fetch(url, options);
+
+            if (response.ok) {
+                return response;
+            } else {
+                console.error(`API call failed with status: ${response.status}`);
+                const errorText = await response.text();
+                console.error(`Error response: ${errorText}`);
+
+                if (attempt < MAX_RETRY_ATTEMPTS - 1) {
+                    console.log(`Waiting ${RETRY_DELAY_MS/1000} seconds before retry...`);
+                    delay(RETRY_DELAY_MS);
+                    attempt++;
+                } else {
+                    throw new Error(`API call failed after ${MAX_RETRY_ATTEMPTS} attempts. Status: ${response.status} - ${errorText}`);
+                }
+            }
+        } catch (error) {
+            if (error.name === 'TypeError' || error.name === 'NetworkError') {
+                console.error(`Network error: ${error.message}`);
+
+                if (attempt < MAX_RETRY_ATTEMPTS - 1) {
+                    console.log(`Waiting ${RETRY_DELAY_MS/1000} seconds before retry...`);
+                    delay(RETRY_DELAY_MS);
+                    attempt++;
+                } else {
+                    throw new Error(`Network error after ${MAX_RETRY_ATTEMPTS} attempts: ${error.message}`);
+                }
+            } else {
+                throw error;
+            }
+        }
+    }
+}
+
+// Main function
+async function main() {
+    try {
+        console.log('Starting Reader Mini App publish...');
+        console.log('--- Inputs ---');
+        console.log('Record ID:', recordId);
+        console.log('Content Type:', contentType);
+        console.log('Title:', title);
+        console.log('Date:', date);
+        console.log('Authors:', authors || '(none)');
+        console.log('Source Name:', sourceName || '(none)');
+        console.log('Source URL:', sourceURL || '(none)');
+        console.log('Original Title:', originalTitle || '(none)');
+        console.log('Original URL:', originalURL || '(none)');
+        console.log('Summary HTML length:', summaryHtml ? summaryHtml.length : 0, 'characters');
+        console.log('Full HTML length:', fullHtml ? fullHtml.length : 0, 'characters');
+
+        // Validate required fields
+        if (!recordId) {
+            throw new Error('RecordId is required');
+        }
+        if (!title) {
+            throw new Error('Title is required');
+        }
+        if (!summaryHtml) {
+            throw new Error('SummaryHTML is required');
+        }
+        if (!date) {
+            throw new Error('Date is required');
+        }
+
+        // Prepare the payload for Reader Publish GCF
+        const payload = {
+            recordId: recordId,
+            contentType: contentType.toLowerCase(),
+            title: title,
+            summaryHtml: summaryHtml,
+            date: date
+        };
+
+        // Add optional fields if present
+        if (fullHtml) {
+            payload.fullHtml = fullHtml;
+        }
+        if (sourceName) {
+            payload.sourceName = sourceName;
+        }
+        if (sourceURL) {
+            payload.sourceUrl = sourceURL;
+        }
+        if (originalTitle) {
+            payload.originalTitle = originalTitle;
+        }
+        if (originalURL) {
+            payload.originalUrl = originalURL;
+        }
+        if (authors) {
+            payload.authors = authors;
+        }
+
+        console.log('Sending request to Reader Publish GCF...');
+        console.log('Payload size:', JSON.stringify(payload).length, 'bytes');
+
+        const response = await fetchWithRetry(READER_PUBLISH_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': API_KEY
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+            throw new Error(`Publish failed: ${result.error || 'Unknown error'}`);
+        }
+
+        console.log('--- Result ---');
+        console.log('Success:', result.success);
+        console.log('Query Param:', result.queryParam);
+        console.log('CDN URL:', result.cdnUrl);
+        console.log('Duration:', result.duration);
+        if (result.skipped) {
+            console.log('Note: Content already existed, skipped re-upload');
+        }
+
+        // Output the query param for storage in ReaderLink field
+        output.set('ReaderLink', result.queryParam);
+        output.set('Success', true);
+
+        console.log('Reader Mini App publish completed successfully');
+
+    } catch (error) {
+        console.error('Error in process:', error);
+        console.error('Error details:', error.message);
+        if (error.stack) {
+            console.error('Stack trace:', error.stack);
+        }
+
+        output.set('ReaderLink', '');
+        output.set('Success', false);
+    }
+}
+
+await main();
